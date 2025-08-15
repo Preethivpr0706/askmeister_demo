@@ -16,8 +16,6 @@ class EcommerceFlow {
                 return this.processOrderNumber(phone, messageText, userSession);
             case 'order_actions':
                 return this.handleOrderActions(phone, buttonId, userSession);
-            case 'order_complete':
-                return this.completeOrderFlow(phone, buttonId, userSession);
 
                 // Product Browsing Flow
             case 'browse_products':
@@ -26,18 +24,8 @@ class EcommerceFlow {
                 return this.handleCategorySelection(phone, buttonId, userSession);
             case 'product_details':
                 return this.showProductDetails(phone, buttonId, userSession);
-            case 'browse_complete':
-                return this.completeBrowseFlow(phone, buttonId, userSession);
-
-                // Cart Recovery Flow
-            case 'cart_recovery':
-                return this.handleCartRecovery(phone, buttonId, userSession);
-            case 'cart_actions':
-                return this.handleCartActions(phone, buttonId, userSession);
-            case 'checkout_process':
-                return this.handleCheckoutProcess(phone, buttonId, userSession);
-            case 'cart_complete':
-                return this.completeCartFlow(phone, buttonId, userSession);
+            case 'order_process':
+                return this.handleOrderProcess(phone, messageText, buttonId, userSession);
 
                 // Customer Support Flow
             case 'customer_support':
@@ -46,16 +34,19 @@ class EcommerceFlow {
                 return this.handleSupportCategory(phone, buttonId, userSession);
             case 'support_details':
                 return this.handleSupportDetails(phone, messageText, buttonId, userSession);
-            case 'support_complete':
-                return this.completeSupportFlow(phone, buttonId, userSession);
 
             default:
                 return this.showEcommerceWelcome(phone, userSession);
         }
     }
 
+    // Helper function to add delay
+    async delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     async showEcommerceWelcome(phone, userSession) {
-        // Send welcome offer image FIRST and WAIT for it to complete
+        // Send welcome offer image FIRST and WAIT
         await whatsappService.sendMediaMessage(
             phone,
             'image',
@@ -63,12 +54,14 @@ class EcommerceFlow {
             '🎉 Special offers just for you!'
         );
 
+        // Add delay to ensure image is sent first
+        await this.delay(1000);
+
         const welcomeText = `🛒 *Welcome to ShopBot*\n\n` +
             `Hi ${userSession.name || 'there'}! Welcome to MegaMart! 🛍️\n\n` +
             `I'm here to help you with:\n` +
-            `📦 Order tracking & updates\n` +
+            `📦 Order tracking\n` +
             `🛍️ Product browsing\n` +
-            `💳 Cart & checkout help\n` +
             `📞 Customer support\n\n` +
             `*How can I assist you today?*`;
 
@@ -77,7 +70,7 @@ class EcommerceFlow {
             welcomeText, [
                 { id: 'track_order', title: '📦 Track Order' },
                 { id: 'browse_products', title: '🛍️ Browse' },
-                { id: 'cart_recovery', title: '🛒 My Cart' }
+                { id: 'customer_support', title: '🎧 Support' }
             ]
         );
 
@@ -90,12 +83,13 @@ class EcommerceFlow {
                 return this.handleOrderTracking(phone, '', userSession);
             case 'browse_products':
                 return this.handleProductBrowsing(phone, buttonId, userSession);
-            case 'cart_recovery':
-                return this.handleCartRecovery(phone, buttonId, userSession);
             case 'customer_support':
                 return this.handleCustomerSupport(phone, buttonId, userSession);
             case 'back_to_main':
+            case 'main_menu':
                 return { nextFlow: 'main', nextStep: 'welcome' };
+            case 'ecom_menu':
+                return this.showEcommerceWelcome(phone, userSession);
             default:
                 await whatsappService.sendTextMessage(
                     phone,
@@ -114,6 +108,8 @@ class EcommerceFlow {
             `${process.env.BASE_MEDIA_URL}/images/order-tracking-info.jpg`,
             'Track your order easily!'
         );
+
+        await this.delay(1000);
 
         await whatsappService.sendTextMessage(
             phone,
@@ -146,95 +142,42 @@ class EcommerceFlow {
             'Your order tracking timeline'
         );
 
+        await this.delay(1000);
+
         await whatsappService.sendTextMessage(
             phone,
             `📦 *Order: ${orderNumber}*\n\n` +
             `*Status:* ${orderStatus.status} ${orderStatus.emoji}\n` +
             `*Delivery:* ${orderStatus.deliveryDate}\n` +
-            `*Tracking:* ${orderStatus.trackingId}\n\n` +
-            `*Items:*\n${orderStatus.items}\n\n` +
-            `*Address:*\n${orderStatus.address}\n\n` +
+            `*Items:* ${orderStatus.items}\n\n` +
             `${orderStatus.statusMessage}`
         );
 
         await whatsappService.sendButtonMessage(
             phone,
             "What would you like to do next?", [
-                { id: 'modify_order', title: '✏️ Modify' },
-                { id: 'contact_delivery', title: '📞 Contact' },
-                { id: 'track_another', title: '📦 Track More' }
+                { id: 'track_another', title: '📦 Track More' },
+                { id: 'browse_products', title: '🛍️ Shop' },
+                { id: 'ecom_menu', title: '🏠 Menu' }
             ]
         );
 
-        return {
-            nextStep: 'order_actions',
-            data: { orderNumber, orderStatus }
-        };
+        return { nextStep: 'order_actions' };
     }
 
     async handleOrderActions(phone, buttonId, userSession) {
         switch (buttonId) {
-            case 'modify_order':
-                // Send modification options image FIRST
-                await whatsappService.sendMediaMessage(
-                    phone,
-                    'image',
-                    `${process.env.BASE_MEDIA_URL}/images/order-modification.jpg`,
-                    'Order modification options'
-                );
-
-                await whatsappService.sendTextMessage(
-                    phone,
-                    `✏️ *Modify Order*\n\n` +
-                    `Order modification options:\n` +
-                    `• Change delivery address\n` +
-                    `• Update delivery time\n` +
-                    `• Cancel order\n\n` +
-                    `📞 Call: 1800-123-4567\n` +
-                    `⏰ Available: 9 AM - 9 PM`
-                );
-                break;
-
-            case 'contact_delivery':
-                // Send delivery partner image FIRST
-                await whatsappService.sendMediaMessage(
-                    phone,
-                    'image',
-                    `${process.env.BASE_MEDIA_URL}/images/delivery-partner.jpg`,
-                    'Your delivery partner details'
-                );
-
-                await whatsappService.sendTextMessage(
-                    phone,
-                    `📞 *Contact Delivery Partner*\n\n` +
-                    `Delivery Partner: FastTrack Express\n` +
-                    `📱 Mobile: +91 98765 43210\n` +
-                    `🚚 Vehicle: KA01AB1234\n\n` +
-                    `💡 You can call directly for real-time updates!`
-                );
-                break;
-
             case 'track_another':
                 return this.handleOrderTracking(phone, '', userSession);
-
+            case 'browse_products':
+                return this.handleProductBrowsing(phone, buttonId, userSession);
+            case 'ecom_menu':
+                return this.showEcommerceWelcome(phone, userSession);
+            case 'main_menu':
+                return { nextFlow: 'main', nextStep: 'welcome' };
             default:
-                break;
+                return this.showEcommerceWelcome(phone, userSession);
         }
-
-        return { nextStep: 'order_complete' };
-    }
-
-    async completeOrderFlow(phone, buttonId, userSession) {
-        await whatsappService.sendButtonMessage(
-            phone,
-            "🎉 *Order tracking completed!*\n\nIs there anything else I can help you with?", [
-                { id: 'browse_products', title: '🛍️ Shop More' },
-                { id: 'customer_support', title: '🎧 Support' },
-                { id: 'back_to_main', title: '🏠 Main Menu' }
-            ]
-        );
-
-        return { nextStep: 'main_menu' };
     }
 
     // ==================== PRODUCT BROWSING FLOW ====================
@@ -247,6 +190,8 @@ class EcommerceFlow {
             '🛍️ Explore our product categories'
         );
 
+        await this.delay(1000);
+
         const browseText = `🛍️ *Product Categories*\n\n` +
             `Discover amazing products!\n\n` +
             `🔥 *Today's Deals:*\n` +
@@ -255,37 +200,13 @@ class EcommerceFlow {
             `• Extra 20% OFF: SAVE20\n\n` +
             `*Choose a category:*`;
 
-        const sections = [{
-                title: "Electronics",
-                rows: [
-                    { id: "smartphones", title: "📱 Smartphones", description: "Latest models & offers" },
-                    { id: "laptops", title: "💻 Laptops", description: "Work & gaming laptops" },
-                    { id: "accessories", title: "🎧 Accessories", description: "Headphones & more" }
-                ]
-            },
-            {
-                title: "Fashion",
-                rows: [
-                    { id: "mens_fashion", title: "👔 Men's Fashion", description: "Clothing & shoes" },
-                    { id: "womens_fashion", title: "👗 Women's Fashion", description: "Trendy outfits" },
-                    { id: "kids_fashion", title: "👶 Kids Fashion", description: "Cute clothes" }
-                ]
-            },
-            {
-                title: "Home & Kitchen",
-                rows: [
-                    { id: "home_decor", title: "🏠 Home Decor", description: "Beautiful items" },
-                    { id: "kitchen", title: "🍳 Kitchen", description: "Appliances & tools" },
-                    { id: "furniture", title: "🪑 Furniture", description: "Stylish furniture" }
-                ]
-            }
-        ];
-
-        await whatsappService.sendListMessage(
+        await whatsappService.sendButtonMessage(
             phone,
-            browseText,
-            "Browse Categories",
-            sections
+            browseText, [
+                { id: 'electronics', title: '📱 Electronics' },
+                { id: 'fashion', title: '👔 Fashion' },
+                { id: 'home', title: '🏠 Home' }
+            ]
         );
 
         return { nextStep: 'category_selection' };
@@ -297,7 +218,7 @@ class EcommerceFlow {
             if (!categoryData) {
                 await whatsappService.sendTextMessage(
                     phone,
-                    "Please select a valid category from the list above."
+                    "Please select a valid category from the options above."
                 );
                 return { nextStep: 'category_selection' };
             }
@@ -310,6 +231,8 @@ class EcommerceFlow {
                 `${categoryData.emoji} ${categoryData.name} collection`
             );
 
+            await this.delay(1000);
+
             await whatsappService.sendTextMessage(
                     phone,
                     `${categoryData.emoji} *${categoryData.name}*\n\n` +
@@ -321,10 +244,9 @@ class EcommerceFlow {
 
         await whatsappService.sendButtonMessage(
             phone,
-            "What would you like to do?",
-            [
-                { id: 'view_products', title: '👀 View Products' },
-                { id: 'add_to_cart', title: '🛒 Add to Cart' },
+            "What would you like to do?", [
+                { id: 'view_products', title: '👀 View Details' },
+                { id: 'order_now', title: '🛒 Order Now' },
                 { id: 'browse_more', title: '🔍 Browse More' }
             ]
         );
@@ -335,6 +257,7 @@ class EcommerceFlow {
         };
     }
 
+    // ==================== PRODUCT DETAILS & ORDERING FLOW ====================
     async showProductDetails(phone, buttonId, userSession) {
         const categoryData = userSession.data?.categoryData;
         
@@ -347,236 +270,211 @@ class EcommerceFlow {
                     `${process.env.BASE_MEDIA_URL}/images/product-showcase.jpg`,
                     '✨ Featured products in this category'
                 );
+                
+                await this.delay(1000);
 
                 await whatsappService.sendTextMessage(
                     phone,
                     `👀 *Product Details*\n\n` +
                     `Here are the top products in ${categoryData?.name}:\n\n` +
                     `${categoryData?.products.map((p, i) => 
-                        `${i + 1}. *${p.name}*\n   ₹${p.price} | ${p.rating}⭐\n   ${p.description}\n`
+                        `${i + 1}. *${p.name}*\n   ₹${p.price} | ⭐⭐⭐⭐⭐\n`
                     ).join('\n')}\n` +
-                    `💡 *Tip:* Use code FIRST10 for 10% off on first order!`
-                );
-                break;
-
-            case 'add_to_cart':
-                // Send cart success image FIRST
-                await whatsappService.sendMediaMessage(
-                    phone,
-                    'image',
-                    `${process.env.BASE_MEDIA_URL}/images/cart-success.jpg`,
-                    '🛒 Successfully added to cart!'
+                    `💡 *Tip:* Use code FIRST10 for 10% off!`
                 );
 
-                await whatsappService.sendTextMessage(
+                await whatsappService.sendButtonMessage(
                     phone,
-                    `🛒 *Added to Cart!*\n\n` +
-                    `✅ ${categoryData?.products[0]?.name} added successfully!\n\n` +
-                    `*Cart Summary:*\n` +
-                    `Items: 1\n` +
-                    `Subtotal: ₹${categoryData?.products[0]?.price}\n` +
-                    `Shipping: FREE\n\n` +
-                    `🎉 You're eligible for free shipping!`
+                    "What would you like to do next?", [
+                        { id: 'order_now', title: '🛒 Order Now' },
+                        { id: 'ecom_menu', title: '🏠 Ecom Menu' },
+                        { id: 'main_menu', title: '🏠 Main Menu' }
+                    ]
                 );
-                break;
+
+                return { nextStep: 'product_details' };
+
+            case 'order_now':
+                return this.handleOrderProcess(phone, '', buttonId, userSession);
 
             case 'browse_more':
                 return this.handleProductBrowsing(phone, buttonId, userSession);
 
-            default:
-                break;
-        }
+            case 'ecom_menu':
+                return this.showEcommerceWelcome(phone, userSession);
 
-        return { nextStep: 'browse_complete' };
-    }
-
-    async completeBrowseFlow(phone, buttonId, userSession) {
-        await whatsappService.sendButtonMessage(
-            phone,
-            "🛍️ *Browse completed!*\n\nWhat would you like to do next?",
-            [
-                { id: 'cart_recovery', title: '🛒 View Cart' },
-                { id: 'track_order', title: '📦 Track Order' },
-                { id: 'back_to_main', title: '🏠 Main Menu' }
-            ]
-        );
-
-        return { nextStep: 'main_menu' };
-    }
-
-    // ==================== CART RECOVERY FLOW ====================
-    async handleCartRecovery(phone, buttonId, userSession) {
-        // Send shopping cart image FIRST
-        await whatsappService.sendMediaMessage(
-            phone,
-            'image',
-            `${process.env.BASE_MEDIA_URL}/images/shopping-cart.jpg`,
-            '🛒 Your cart items are waiting!'
-        );
-
-        const cartText = `🛒 *Your Shopping Cart*\n\n` +
-            `Hi ${userSession.name || 'there'}! Items in your cart:\n\n` +
-            `*Cart Items:*\n` +
-            `📱 iPhone 15 Pro - ₹1,34,900\n` +
-            `🎧 AirPods Pro - ₹24,900\n` +
-            `📱 Phone Case - ₹1,299\n\n` +
-            `*Subtotal:* ₹1,61,099\n` +
-            `*Discount:* -₹16,110 (10%)\n` +
-            `*Total:* ₹1,44,989\n\n` +
-            `💰 *Offer:* SAVE15 for extra 15% OFF!`;
-
-        await whatsappService.sendButtonMessage(
-            phone,
-            cartText,
-            [
-                { id: 'checkout_now', title: '💳 Checkout' },
-                { id: 'apply_coupon', title: '🎫 Coupon' },
-                { id: 'save_later', title: '💾 Save Later' }
-            ]
-        );
-
-        return { nextStep: 'cart_actions' };
-    }
-
-    async handleCartActions(phone, buttonId, userSession) {
-        switch (buttonId) {
-            case 'checkout_now':
-                return this.handleCheckoutProcess(phone, buttonId, userSession);
-
-            case 'apply_coupon':
-                // Send coupon offers image FIRST
-                await whatsappService.sendMediaMessage(
-                    phone,
-                    'image',
-                    `${process.env.BASE_MEDIA_URL}/images/coupon-offers.jpg`,
-                    '🎫 Available coupon offers'
-                );
-
-                await whatsappService.sendTextMessage(
-                    phone,
-                    `🎫 *Apply Coupon*\n\n` +
-                    `Available coupons:\n` +
-                    `• SAVE15 - 15% OFF (Max ₹5000)\n` +
-                    `• FIRST10 - 10% OFF for new users\n` +
-                    `• FREESHIP - Free shipping\n\n` +
-                    `💡 Enter coupon code or select from above`
-                );
-                break;
-
-            case 'save_later':
-                // Send save for later image FIRST
-                await whatsappService.sendMediaMessage(
-                    phone,
-                    'image',
-                    `${process.env.BASE_MEDIA_URL}/images/save-for-later.jpg`,
-                    '💾 Items saved for later'
-                );
-
-                await whatsappService.sendTextMessage(
-                    phone,
-                    `💾 *Saved for Later*\n\n` +
-                    `✅ Your cart has been saved!\n\n` +
-                    `We'll send you reminders about:\n` +
-                    `📧 Price drops\n` +
-                    `🎁 Special offers\n` +
-                    `⏰ Limited time deals\n\n` +
-                    `Items will be saved for 30 days.`
-                );
-                break;
+            case 'main_menu':
+                return { nextFlow: 'main', nextStep: 'welcome' };
 
             default:
-                break;
+                // If no specific button, show the product details options
+                await whatsappService.sendButtonMessage(
+                    phone,
+                    "What would you like to do next?", [
+                        { id: 'order_now', title: '🛒 Order Now' },
+                        { id: 'ecom_menu', title: '🏠 Ecom Menu' },
+                        { id: 'main_menu', title: '🏠 Main Menu' }
+                    ]
+                );
+                return { nextStep: 'product_details' };
         }
-
-        return { nextStep: 'cart_complete' };
     }
 
-    async handleCheckoutProcess(phone, buttonId, userSession) {
-        // Send checkout process image FIRST
-        await whatsappService.sendMediaMessage(
-            phone,
-            'image',
-            `${process.env.BASE_MEDIA_URL}/images/checkout-process.jpg`,
-            '💳 Secure checkout process'
-        );
-
-        await whatsappService.sendTextMessage(
-            phone,
-            `💳 *Checkout Process*\n\n` +
-            `*Step 1:* Delivery Address ✅\n` +
-            `*Step 2:* Payment Method\n` +
-            `*Step 3:* Order Confirmation\n\n` +
-            `*Payment Options:*\n` +
-            `💳 Credit/Debit Card\n` +
-            `📱 UPI/Digital Wallet\n` +
-            `💰 Cash on Delivery\n` +
-            `🏦 Net Banking\n\n` +
-            `*Estimated Delivery:* 2-3 days\n` +
-            `*Shipping:* FREE (Above ₹500)`
-        );
-
-        await whatsappService.sendButtonMessage(
-            phone,
-            "Choose your payment method:",
-            [
-                { id: 'card_payment', title: '💳 Card' },
-                { id: 'upi_payment', title: '📱 UPI' },
-                { id: 'cod_payment', title: '💰 COD' }
-            ]
-        );
-
-        return { nextStep: 'cart_complete' };
-    }
-
-    async completeCartFlow(phone, buttonId, userSession) {
-        let paymentMethod = '';
-        switch (buttonId) {
-            case 'card_payment':
-                paymentMethod = 'Credit/Debit Card';
-                break;
-            case 'upi_payment':
-                paymentMethod = 'UPI Payment';
-                break;
-            case 'cod_payment':
-                paymentMethod = 'Cash on Delivery';
-                break;
+    async handleOrderProcess(phone, messageText, buttonId, userSession) {
+        // Initialize order form if not exists
+        if (!userSession.data || !userSession.data.orderForm) {
+            userSession.data = {
+                ...(userSession.data || {}),
+                orderForm: { step: 'start_order' }
+            };
         }
 
-        if (paymentMethod) {
-            // Send order success image FIRST
+        const form = userSession.data.orderForm;
+        const categoryData = userSession.data.categoryData;
+
+        // Handle order initiation
+        if (buttonId === 'order_now' || form.step === 'start_order') {
+            form.step = 'collect_name';
+            form.selectedProduct = categoryData?.products[0]; // Default to first product
+
             await whatsappService.sendMediaMessage(
                 phone,
                 'image',
-                `${process.env.BASE_MEDIA_URL}/images/order-success.jpg`,
-                '🎉 Order placed successfully!'
+                `${process.env.BASE_MEDIA_URL}/images/order-form.jpg`,
+                '📝 Quick order form'
             );
+            
+            await this.delay(1000);
 
             await whatsappService.sendTextMessage(
                 phone,
-                `🎉 *Order Placed Successfully!*\n\n` +
-                `*Order ID:* MM${Date.now()}\n` +
-                `*Payment:* ${paymentMethod}\n` +
-                `*Total:* ₹1,44,989\n` +
-                `*Delivery:* 2-3 business days\n\n` +
-                `📧 Order confirmation sent to your email\n` +
-                `📱 Track your order anytime!`
+                `🛒 *Order: ${form.selectedProduct?.name}*\n` +
+                `💰 *Price: ₹${form.selectedProduct?.price}*\n\n` +
+                `📝 Please provide your full name:`
             );
+
+            return {
+                nextStep: 'order_process',
+                data: { orderForm: form, categoryData }
+            };
         }
 
-        await whatsappService.sendButtonMessage(
-            phone,
-            "🛒 *Cart process completed!*\n\nWhat would you like to do next?",
-            [
-                { id: 'track_order', title: '📦 Track Order' },
-                { id: 'browse_products', title: '🛍️ Shop More' },
-                { id: 'back_to_main', title: '🏠 Main Menu' }
-            ]
-        );
+        // Handle form steps
+        switch (form.step) {
+            case 'collect_name':
+                if (!messageText || messageText.length < 2) {
+                    await whatsappService.sendTextMessage(
+                        phone,
+                        "Please provide a valid name:"
+                    );
+                    return { nextStep: 'order_process' };
+                }
 
-        return { nextStep: 'main_menu' };
+                form.name = messageText;
+                form.step = 'collect_phone';
+
+                await whatsappService.sendTextMessage(
+                    phone,
+                    "📱 Please provide your phone number:"
+                );
+                break;
+
+            case 'collect_phone':
+                if (!messageText || messageText.length < 10) {
+                    await whatsappService.sendTextMessage(
+                        phone,
+                        "Please provide a valid phone number:"
+                    );
+                    return { nextStep: 'order_process' };
+                }
+
+                form.phone = messageText;
+                form.step = 'collect_address';
+
+                await whatsappService.sendTextMessage(
+                    phone,
+                    "📍 Please provide your delivery address:"
+                );
+                break;
+
+            case 'collect_address':
+                if (!messageText || messageText.length < 10) {
+                    await whatsappService.sendTextMessage(
+                        phone,
+                        "Please provide a complete address:"
+                    );
+                    return { nextStep: 'order_process' };
+                }
+
+                form.address = messageText;
+                form.step = 'payment_method';
+
+                await whatsappService.sendButtonMessage(
+                    phone,
+                    "💳 Choose your payment method:", [
+                        { id: 'cod', title: '💰 COD' },
+                        { id: 'online', title: '💳 Online' },
+                        { id: 'upi', title: '📱 UPI' }
+                    ]
+                );
+                break;
+
+            case 'payment_method':
+                const paymentMethods = {
+                    'cod': 'Cash on Delivery',
+                    'online': 'Online Payment',
+                    'upi': 'UPI Payment'
+                };
+
+                form.paymentMethod = paymentMethods[buttonId] || 'Cash on Delivery';
+                form.step = 'completed';
+
+                const orderId = `ORD${Date.now().toString().slice(-6)}`;
+
+                await whatsappService.sendMediaMessage(
+                    phone,
+                    'image',
+                    `${process.env.BASE_MEDIA_URL}/images/order-success.jpg`,
+                    '🎉 Order placed successfully!'
+                );
+                
+                await this.delay(1000);
+
+                await whatsappService.sendTextMessage(
+                    phone,
+                    `🎉 *Order Placed Successfully!*\n\n` +
+                    `*Order Details:*\n` +
+                    `🆔 Order ID: ${orderId}\n` +
+                    `👤 Name: ${form.name}\n` +
+                    `📱 Phone: ${form.phone}\n` +
+                    `🛍️ Product: ${form.selectedProduct?.name}\n` +
+                    `💰 Amount: ₹${form.selectedProduct?.price}\n` +
+                    `💳 Payment: ${form.paymentMethod}\n` +
+                    `📍 Address: ${form.address.substring(0, 30)}...\n\n` +
+                    `📧 Order confirmation sent to your phone!\n` +
+                    `🚚 Delivery in 2-3 business days`
+                );
+
+                await whatsappService.sendButtonMessage(
+                    phone,
+                    "🛒 *Order completed!*\n\nWhat would you like to do next?", [
+                        { id: 'track_order', title: '📦 Track Order' },
+                        { id: 'ecom_menu', title: '🏠 Ecom Menu' },
+                        { id: 'main_menu', title: '🏠 Main Menu' }
+                    ]
+                );
+
+                return { nextStep: 'main_menu' };
+
+            default:
+                return { nextStep: 'order_process' };
+        }
+
+        return {
+            nextStep: 'order_process',
+            data: { orderForm: form, categoryData }
+        };
     }
-
-    // ==================== CUSTOMER SUPPORT FLOW ====================
     async handleCustomerSupport(phone, buttonId, userSession) {
         // Send customer support image FIRST
         await whatsappService.sendMediaMessage(
@@ -585,6 +483,8 @@ class EcommerceFlow {
             `${process.env.BASE_MEDIA_URL}/images/customer-support.jpg`,
             '🎧 24/7 Customer Support'
         );
+        
+        await this.delay(1000);
 
         const supportText = `🎧 *Customer Support*\n\n` +
             `Hi ${userSession.name || 'there'}! How can we help?\n\n` +
@@ -592,15 +492,12 @@ class EcommerceFlow {
             `📦 Order & delivery\n` +
             `💳 Payment & refunds\n` +
             `🔄 Returns & exchanges\n\n` +
-            `*Support Hours:*\n` +
-            `⏰ 24/7 Chat Support\n` +
-            `📞 Call: 9 AM - 9 PM\n\n` +
+            `*Support Hours:* 24/7 Chat\n` +
             `*How can we assist you?*`;
 
         await whatsappService.sendButtonMessage(
             phone,
-            supportText,
-            [
+            supportText, [
                 { id: 'order_issue', title: '📦 Order Issue' },
                 { id: 'payment_issue', title: '💳 Payment' },
                 { id: 'return_exchange', title: '🔄 Return' }
@@ -623,9 +520,8 @@ class EcommerceFlow {
                     `Common order issues:\n` +
                     `• Delayed delivery\n` +
                     `• Wrong item received\n` +
-                    `• Damaged package\n` +
                     `• Missing items\n\n` +
-                    `Please describe your specific issue:`;
+                    `Please describe your issue:`;
                 break;
 
             case 'payment_issue':
@@ -633,23 +529,21 @@ class EcommerceFlow {
                 imageUrl = `${process.env.BASE_MEDIA_URL}/images/payment-issues.jpg`;
                 supportMessage = `💳 *Payment Issue Support*\n\n` +
                     `Payment related help:\n` +
-                    `• Payment failed but amount deducted\n` +
+                    `• Payment failed\n` +
                     `• Refund status\n` +
-                    `• Payment method issues\n` +
                     `• Invoice queries\n\n` +
-                    `Please describe your payment issue:`;
+                    `Please describe your issue:`;
                 break;
 
             case 'return_exchange':
                 supportType = 'Return/Exchange';
                 imageUrl = `${process.env.BASE_MEDIA_URL}/images/return-exchange.jpg`;
                 supportMessage = `🔄 *Return/Exchange Support*\n\n` +
-                    `Return & Exchange policy:\n` +
+                    `Return policy:\n` +
                     `• 30-day return window\n` +
                     `• Free return pickup\n` +
-                    `• Instant refund/exchange\n` +
-                    `• Original packaging required\n\n` +
-                    `Please describe what you want to return:`;
+                    `• Instant refund\n\n` +
+                    `Please describe what to return:`;
                 break;
 
             default:
@@ -663,6 +557,8 @@ class EcommerceFlow {
             imageUrl,
             `${supportType} assistance`
         );
+        
+        await this.delay(1000);
 
         await whatsappService.sendTextMessage(phone, supportMessage);
 
@@ -673,9 +569,25 @@ class EcommerceFlow {
     }
 
     async handleSupportDetails(phone, messageText, buttonId, userSession) {
+        // Handle navigation buttons
+        if (buttonId) {
+            switch (buttonId) {
+                case 'track_order':
+                    return this.handleOrderTracking(phone, '', userSession);
+                case 'browse_products':
+                    return this.handleProductBrowsing(phone, buttonId, userSession);
+                case 'ecom_menu':
+                    return this.showEcommerceWelcome(phone, userSession);
+                case 'main_menu':
+                    return { nextFlow: 'main', nextStep: 'welcome' };
+                default:
+                    break;
+            }
+        }
+
         const supportType = userSession.data?.supportType || 'General';
         
-        if (messageText && messageText.length > 10) {
+        if (messageText && messageText.length > 5) {
             // Send support ticket created image FIRST
             await whatsappService.sendMediaMessage(
                 phone,
@@ -683,41 +595,37 @@ class EcommerceFlow {
                 `${process.env.BASE_MEDIA_URL}/images/support-ticket.jpg`,
                 '✅ Support ticket created successfully'
             );
+            
+            await this.delay(1000);
 
             await whatsappService.sendTextMessage(
                 phone,
                 `✅ *Support Ticket Created*\n\n` +
-                `*Ticket ID:* SUP${Date.now()}\n` +
+                `*Ticket ID:* SUP${Date.now().toString().slice(-6)}\n` +
                 `*Type:* ${supportType}\n` +
                 `*Status:* In Progress\n\n` +
-                `*Your Issue:*\n"${messageText.substring(0, 100)}..."\n\n` +
-                `📞 Our team will contact you within 2 hours\n` +
-                `📧 Updates will be sent to your email\n\n` +
-                `*Priority Support:* Call 1800-123-4567`
+                `*Your Issue:*\n"${messageText.substring(0, 50)}..."\n\n` +
+                `📞 Team will contact you within 2 hours\n` +
+                `📧 Updates sent to your email`
             );
+
+            await whatsappService.sendButtonMessage(
+                phone,
+                "🎧 *Support request completed!*\n\nWhat would you like to do next?", [
+                    { id: 'track_order', title: '📦 Track Order' },
+                    { id: 'ecom_menu', title: '🏠 Ecom Menu' },
+                    { id: 'main_menu', title: '🏠 Main Menu' }
+                ]
+            );
+
+            return { nextStep: 'main_menu' };
         } else {
             await whatsappService.sendTextMessage(
                 phone,
-                `Please provide more details about your ${supportType.toLowerCase()} (minimum 10 characters)`
+                `Please provide more details about your ${supportType.toLowerCase()} (minimum 5 characters)`
             );
             return { nextStep: 'support_details' };
         }
-
-        return { nextStep: 'support_complete' };
-    }
-
-    async completeSupportFlow(phone, buttonId, userSession) {
-        await whatsappService.sendButtonMessage(
-            phone,
-            "🎧 *Support request completed!*\n\nIs there anything else I can help you with?",
-            [
-                { id: 'track_order', title: '📦 Track Order' },
-                { id: 'browse_products', title: '🛍️ Shop' },
-                { id: 'back_to_main', title: '🏠 Main Menu' }
-            ]
-        );
-
-        return { nextStep: 'main_menu' };
     }
 
     // ==================== HELPER METHODS ====================
@@ -728,133 +636,61 @@ class EcommerceFlow {
                 emoji: "🚚",
                 deliveryDate: "Today by 6 PM",
                 statusMessage: "🎉 Your order is out for delivery!",
-                trackingId: "TRK" + Math.random().toString(36).substr(2, 9).toUpperCase()
+                items: "• Wireless Headphones x1\n• Phone Case x1"
             },
             {
                 status: "In Transit",
                 emoji: "📦",
                 deliveryDate: "Tomorrow by 8 PM",
                 statusMessage: "📍 Your order is on the way!",
-                trackingId: "TRK" + Math.random().toString(36).substr(2, 9).toUpperCase()
+                items: "• Smartphone x1\n• Screen Protector x1"
             },
             {
                 status: "Delivered",
                 emoji: "✅",
                 deliveryDate: "Delivered on " + new Date().toLocaleDateString(),
                 statusMessage: "🎉 Order delivered successfully!",
-                trackingId: "TRK" + Math.random().toString(36).substr(2, 9).toUpperCase()
+                items: "• Laptop x1\n• Mouse x1"
             }
         ];
 
-        const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
-
-        return {
-            ...randomStatus,
-            items: "• Wireless Headphones x1\n• Phone Case (Black) x1\n• Screen Protector x2",
-            address: "John Doe\n123, MG Road\nBangalore - 560034\nPhone: +91 98765 43210"
-        };
+        return statuses[Math.floor(Math.random() * statuses.length)];
     }
 
     getCategoryData(categoryId) {
         const categories = {
-            smartphones: {
-                name: "Smartphones",
+            electronics: {
+                name: "Electronics",
                 emoji: "📱",
-                description: "Latest smartphones with amazing features and competitive prices.",
+                description: "Latest gadgets with amazing features and competitive prices.",
                 products: [
-                    { name: "iPhone 15 Pro", price: "1,34,900", rating: "4.8", description: "Latest Apple flagship with titanium design" },
-                    { name: "Samsung Galaxy S24", price: "89,999", rating: "4.7", description: "AI-powered Android flagship" },
-                    { name: "OnePlus 12", price: "64,999", rating: "4.6", description: "Flagship killer with premium features" }
+                    { name: "iPhone 15 Pro", price: "1,34,900" },
+                    { name: "Samsung Galaxy S24", price: "89,999" },
+                    { name: "MacBook Air M3", price: "1,14,900" }
                 ],
-                                offers: "• Up to ₹15,000 exchange bonus\n• No cost EMI available\n• Free wireless charger"
+                offers: "• Up to ₹15,000 exchange bonus\n• No cost EMI available\n• Free accessories"
             },
-            laptops: {
-                name: "Laptops",
-                emoji: "💻",
-                description: "High-performance laptops for work, gaming, and creativity.",
-                products: [
-                    { name: "MacBook Air M3", price: "1,14,900", rating: "4.9", description: "Ultra-thin laptop with M3 chip" },
-                    { name: "Dell XPS 13", price: "89,990", rating: "4.7", description: "Premium Windows ultrabook" },
-                    { name: "HP Pavilion Gaming", price: "65,990", rating: "4.5", description: "Gaming laptop with RTX graphics" }
-                ],
-                offers: "• Free Microsoft Office\n• Extended warranty\n• Gaming accessories bundle"
-            },
-            accessories: {
-                name: "Accessories",
-                emoji: "🎧",
-                description: "Premium accessories to enhance your tech experience.",
-                products: [
-                    { name: "AirPods Pro", price: "24,900", rating: "4.8", description: "Active noise cancellation" },
-                    { name: "Sony WH-1000XM5", price: "29,990", rating: "4.9", description: "Industry-leading noise canceling" },
-                    { name: "Anker PowerBank", price: "2,999", rating: "4.6", description: "20000mAh fast charging" }
-                ],
-                offers: "• Buy 2 Get 1 Free on cases\n• Free shipping\n• 1-year warranty"
-            },
-            mens_fashion: {
-                name: "Men's Fashion",
+            fashion: {
+                name: "Fashion",
                 emoji: "👔",
-                description: "Trendy clothing and accessories for modern men.",
+                description: "Trendy clothing and accessories for every occasion.",
                 products: [
-                    { name: "Formal Shirt", price: "1,999", rating: "4.5", description: "Premium cotton formal shirt" },
-                    { name: "Casual Jeans", price: "2,499", rating: "4.6", description: "Comfortable slim-fit jeans" },
-                    { name: "Leather Shoes", price: "4,999", rating: "4.7", description: "Genuine leather formal shoes" }
+                    { name: "Designer Dress", price: "3,999" },
+                    { name: "Formal Shirt", price: "1,999" },
+                    { name: "Casual Jeans", price: "2,499" }
                 ],
                 offers: "• Buy 2 Get 1 Free\n• Flat 40% OFF on combo\n• Free alterations"
             },
-            womens_fashion: {
-                name: "Women's Fashion",
-                emoji: "👗",
-                description: "Stylish outfits and accessories for every occasion.",
-                products: [
-                    { name: "Designer Dress", price: "3,999", rating: "4.8", description: "Elegant party wear dress" },
-                    { name: "Casual Top", price: "1,299", rating: "4.5", description: "Comfortable cotton top" },
-                    { name: "Handbag", price: "2,999", rating: "4.6", description: "Premium leather handbag" }
-                ],
-                offers: "• Up to 60% OFF\n• Free jewelry with dress\n• Size exchange available"
-            },
-            kids_fashion: {
-                name: "Kids Fashion",
-                emoji: "👶",
-                description: "Cute and comfortable clothing for children.",
-                products: [
-                    { name: "Kids T-Shirt", price: "599", rating: "4.7", description: "Soft cotton cartoon t-shirt" },
-                    { name: "Kids Jeans", price: "899", rating: "4.5", description: "Comfortable kids denim" },
-                    { name: "School Shoes", price: "1,499", rating: "4.6", description: "Durable school shoes" }
-                ],
-                offers: "• Buy 3 Get 1 Free\n• Growing size guarantee\n• Free school bag"
-            },
-            home_decor: {
-                name: "Home Decor",
+            home: {
+                name: "Home & Kitchen",
                 emoji: "🏠",
-                description: "Beautiful items to decorate your home.",
+                description: "Essential items to make your home beautiful and functional.",
                 products: [
-                    { name: "Wall Art", price: "2,499", rating: "4.6", description: "Modern abstract wall painting" },
-                    { name: "Table Lamp", price: "1,999", rating: "4.5", description: "Designer LED table lamp" },
-                    { name: "Cushion Set", price: "1,299", rating: "4.7", description: "Decorative cushion covers" }
+                    { name: "Mixer Grinder", price: "4,999" },
+                    { name: "Office Chair", price: "8,999" },
+                    { name: "Wall Art", price: "2,499" }
                 ],
-                offers: "• Flat 50% OFF\n• Free installation\n• Mix & match deals"
-            },
-            kitchen: {
-                name: "Kitchen",
-                emoji: "🍳",
-                description: "Essential appliances and cookware for your kitchen.",
-                products: [
-                    { name: "Non-stick Pan", price: "1,499", rating: "4.6", description: "Premium non-stick cookware" },
-                    { name: "Mixer Grinder", price: "4,999", rating: "4.7", description: "3-jar mixer grinder" },
-                    { name: "Knife Set", price: "2,999", rating: "4.5", description: "Professional knife set" }
-                ],
-                offers: "• Free recipe book\n• Extended warranty\n• Cooking class voucher"
-            },
-            furniture: {
-                name: "Furniture",
-                emoji: "🪑",
-                description: "Stylish and comfortable furniture for your home.",
-                products: [
-                    { name: "Office Chair", price: "8,999", rating: "4.7", description: "Ergonomic office chair" },
-                    { name: "Dining Table", price: "15,999", rating: "4.8", description: "4-seater wooden dining table" },
-                    { name: "Bookshelf", price: "6,999", rating: "4.6", description: "5-tier wooden bookshelf" }
-                ],
-                offers: "• Free assembly\n• 0% EMI available\n• Home trial for 7 days"
+                offers: "• Free installation\n• Extended warranty\n• Home trial for 7 days"
             }
         };
 

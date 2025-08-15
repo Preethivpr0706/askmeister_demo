@@ -36,6 +36,11 @@ class AppointmentsFlow {
         }
     }
 
+    // Helper function for delays
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     async showAppointmentsWelcome(phone, userSession) {
         // Send clinic image first
         await whatsappService.sendMediaMessage(
@@ -44,6 +49,9 @@ class AppointmentsFlow {
             `${process.env.BASE_MEDIA_URL}/images/healthcare-clinic.jpg`,
             '🏥 Welcome to HealthCare Plus!'
         );
+
+        // Add delay to ensure image loads before text message
+        await this.delay(2000);
 
         const welcomeText = `📅 *Welcome to AppointBot*\n\n` +
             `Hello ${userSession.name || 'there'}! Welcome to HealthCare Plus! 🏥\n\n` +
@@ -92,6 +100,9 @@ class AppointmentsFlow {
             `${process.env.BASE_MEDIA_URL}/images/doctor-appointment.jpg`,
             '📅 Book your appointment today!'
         );
+
+        // Add delay to ensure image loads before text message
+        await this.delay(2000);
 
         const bookingText = `📅 *Book New Appointment*\n\n` +
             `Choose your department:\n\n` +
@@ -172,6 +183,9 @@ class AppointmentsFlow {
                 `📅 Tomorrow: 10AM, 2PM, 4PM\n\n` +
                 `Ready to book?`
             );
+
+            // Small delay before showing buttons
+            await this.delay(1000);
 
             await whatsappService.sendButtonMessage(
                 phone,
@@ -302,6 +316,9 @@ class AppointmentsFlow {
             '✅ Appointment confirmed!'
         );
 
+        // Add delay to ensure image loads before text message
+        await this.delay(2000);
+
         const confirmationText = `✅ *Appointment Booked!*\n\n` +
             `*Details:*\n` +
             `👤 Patient: ${form.patientName}\n` +
@@ -316,6 +333,9 @@ class AppointmentsFlow {
 
         await whatsappService.sendTextMessage(phone, confirmationText);
 
+        // Small delay before sending location
+        await this.delay(1000);
+
         // Send location
         await whatsappService.sendLocationMessage(
             phone,
@@ -323,6 +343,9 @@ class AppointmentsFlow {
             "HealthCare Plus",
             "MG Road, Bangalore"
         );
+
+        // Delay before final buttons
+        await this.delay(1500);
 
         await whatsappService.sendButtonMessage(
             phone,
@@ -344,6 +367,9 @@ class AppointmentsFlow {
             `${process.env.BASE_MEDIA_URL}/images/doctor-schedule.jpg`,
             '🔍 Check doctor availability'
         );
+
+        // Add delay to ensure image loads before text message
+        await this.delay(2000);
 
         const availabilityText = `🔍 *Doctor Availability*\n\n` +
             `*Today's Schedule:*\n\n` +
@@ -376,6 +402,8 @@ class AppointmentsFlow {
                     phone,
                     `📅 *Redirecting to Booking...*`
                 );
+                // Small delay before redirecting
+                await this.delay(1000);
                 return this.startBookingFlow(phone, userSession);
 
             case 'tomorrow':
@@ -412,6 +440,9 @@ class AppointmentsFlow {
                 break;
         }
 
+        // Small delay before final navigation options
+        await this.delay(1000);
+
         // Always provide navigation options at the end
         await whatsappService.sendButtonMessage(
             phone,
@@ -433,6 +464,9 @@ class AppointmentsFlow {
             `${process.env.BASE_MEDIA_URL}/images/manage-appointments.jpg`,
             '📝 Manage your appointments'
         );
+
+        // Add delay to ensure image loads before text message
+        await this.delay(2000);
 
         const manageText = `📝 *Your Appointments*\n\n` +
             `*Upcoming:*\n\n` +
@@ -507,6 +541,9 @@ class AppointmentsFlow {
             default:
                 break;
         }
+
+        // Small delay before final navigation options
+        await this.delay(1000);
 
         // Always provide navigation options at the end
         await whatsappService.sendButtonMessage(

@@ -40,6 +40,11 @@ class AutomobileFlow {
         }
     }
 
+    // Helper function for delays
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     async showAutomobileWelcome(phone, userSession) {
         // Send showroom image first
         await whatsappService.sendMediaMessage(
@@ -48,6 +53,9 @@ class AutomobileFlow {
             `${process.env.BASE_MEDIA_URL}/images/automobile-showroom.jpg`,
             '🚗 Welcome to Premium Motors!'
         );
+
+        // Add delay to ensure image loads before text message
+        await this.delay(2000);
 
         const welcomeText = `🚗 *Welcome to AutoBot*\n\n` +
             `Hello ${userSession.name || 'there'}! Welcome to Premium Motors! 🏎️\n\n` +
@@ -96,6 +104,9 @@ class AutomobileFlow {
             `${process.env.BASE_MEDIA_URL}/images/test-drive-banner.jpg`,
             '🚗 Book your test drive today!'
         );
+
+        // Add delay to ensure image loads before text message
+        await this.delay(2000);
 
         const testDriveText = `🚗 *Book Your Test Drive*\n\n` +
             `Experience the thrill before you buy!\n\n` +
@@ -283,6 +294,9 @@ class AutomobileFlow {
             '✅ Test drive booked successfully!'
         );
 
+        // Add delay to ensure image loads before text message
+        await this.delay(2000);
+
         const confirmationText = `✅ *Test Drive Booked!*\n\n` +
             `*Booking Details:*\n` +
             `👤 Name: ${form.name}\n` +
@@ -294,6 +308,9 @@ class AutomobileFlow {
             `📞 We'll call you within 2 hours!`;
 
         await whatsappService.sendTextMessage(phone, confirmationText);
+
+        // Small delay before final buttons
+        await this.delay(1000);
 
         await whatsappService.sendButtonMessage(
             phone,
@@ -315,6 +332,9 @@ class AutomobileFlow {
             `${process.env.BASE_MEDIA_URL}/images/car-models-showcase.jpg`,
             '🚙 Explore our latest models!'
         );
+
+        // Add delay to ensure image loads before text message
+        await this.delay(2000);
 
         const modelsText = `🚙 *Our Latest Models*\n\n` +
             `Discover amazing cars!\n\n` +
@@ -404,6 +424,8 @@ class AutomobileFlow {
                     phone,
                     `🚗 *Redirecting to Test Drive...*`
                 );
+                // Small delay before redirecting
+                await this.delay(1000);
                 return this.startTestDriveFlow(phone, userSession);
 
             case 'get_quote':
@@ -434,6 +456,9 @@ class AutomobileFlow {
                 break;
         }
 
+        // Small delay before final navigation options
+        await this.delay(1000);
+
         // Always provide navigation options at the end
         await whatsappService.sendButtonMessage(
             phone,
@@ -455,6 +480,9 @@ class AutomobileFlow {
             `${process.env.BASE_MEDIA_URL}/images/car-service-center.jpg`,
             '🔧 Professional car service'
         );
+
+        // Add delay to ensure image loads before text message
+        await this.delay(2000);
 
         const serviceText = `🔧 *Car Service Booking*\n\n` +
             `Keep your car perfect!\n\n` +
@@ -575,6 +603,9 @@ class AutomobileFlow {
             default:
                 break;
         }
+
+        // Small delay before final navigation options
+        await this.delay(1000);
 
         // Always provide navigation options at the end
         await whatsappService.sendButtonMessage(
